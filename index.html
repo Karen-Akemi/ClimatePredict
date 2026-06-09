@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClimatePredict — Central Inteligente</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --green-logo: #3d8f3d;
+  --green-dark: #1b431b;
+  --green-mid: #2e7d2e;
+  --green-btn: #4caf50;
+  --green-light: #81c784;
+  --green-pale: #e8f5e9;
+  --green-mist: #f1f8f1;
+  --bg-app: #f9fbf9; 
+  --white: #ffffff;
+  --border: #eaeee9;
+  --text-primary: #111811;
+  --text-secondary: #4a5c4a;
+  --text-muted: #8b9d8b;
+  --red: #f44336;
+  --red-light: #ffebee;
+  --amber: #ff9800;
+  --amber-light: #fff3e0;
+  --blue: #42a5f5;
+  --blue-light: #e3f2fd;
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.03);
+  --shadow-md: 0 8px 24px rgba(46, 125, 46, 0.06);
+  --sidebar-w: 250px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;scroll-behavior: smooth;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-app);color:var(--text-primary);display:flex;font-size:13px;}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#d5e0d5;border-radius:99px;}
+::-webkit-scrollbar-thumb:hover{background:var(--green-light);}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  width:var(--sidebar-w);background:var(--white);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;
+}
+.logo-area{padding:24px;border-bottom:1px solid var(--border);}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.logo-mark{display:flex;align-items:center;gap:3px;}
+.logo-mark .sq{width:12px;height:12px;background:var(--green-logo);border-radius:3px;}
+.logo-mark .sq:nth-child(2){width:8px;height:8px;margin-top:4px;}
+.logo-text{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:var(--text-primary);}
+.logo-text span{color:var(--green-logo);font-weight:600;}
+
+.user-block{
+  display:flex;align-items:center;gap:12px;padding:12px;
+  background:var(--white);border-radius:12px;margin:16px 20px 4px;
+  border:1px solid var(--border);
+}
+.user-avatar{
+  width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--green-dark),var(--green-btn));
+  display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;
+}
+.user-info .name{font-size:13px;font-weight:700;color:var(--text-primary);}
+.user-info .role{font-size:11px;color:var(--text-muted);font-weight:500;}
+
+.nav{flex:1;padding:12px 16px;overflow-y:auto;}
+.nav-section-label{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);padding:16px 12px 8px;}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;
+  color:var(--text-secondary);cursor:pointer;transition:all 0.2s;margin-bottom:2px;
+  font-size:13.5px;font-weight:600;
+  text-decoration:none;
+}
+.nav-item:hover{background:var(--green-mist);color:var(--green-dark);}
+.nav-item.active{background:var(--green-pale);color:var(--green-dark);}
+.nav-item .nav-icon{font-size:16px;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--red);color:white;border-radius:99px;font-size:11px;font-weight:700;padding:2px 8px;}
+
+/* ─── MAIN & TOPBAR ─── */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+.topbar{
+  background:var(--bg-app);padding:24px 32px 12px;
+  display:flex;align-items:flex-end;justify-content:space-between;flex-shrink:0;z-index:10;
+}
+.page-title h1{font-size:24px;font-weight:800;color:var(--text-primary);letter-spacing:-0.5px;}
+.page-title p{font-size:13px;color:var(--text-muted);margin-top:4px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.btn-primary{background:var(--green-btn);color:white;border:none;padding:10px 20px;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;transition:0.2s;display:flex;align-items:center;gap:6px;}
+.btn-primary:hover{background:var(--green-mid);transform:translateY(-1px);}
+
+/* ─── CONTENT (Single Page) ─── */
+.content{flex:1;overflow-y:auto;padding:12px 32px 32px;display:flex;flex-direction:column;gap:40px; scroll-behavior: smooth;}
+.section-block { display: flex; flex-direction: column; gap: 20px; }
+.section-title { font-size: 18px; font-weight: 800; color: var(--green-dark); margin-bottom: -10px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+
+/* ─── CARDS & PANELS ─── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;}
+.kpi-card{
+  background:var(--white);border-radius:var(--radius-lg);padding:20px;
+  box-shadow:var(--shadow-sm);border:1px solid var(--border);
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.kpi-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.kpi-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.kpi-icon.g{background:var(--green-pale);color:var(--green-dark);}
+.kpi-icon.a{background:var(--amber-light);color:var(--amber);}
+.kpi-icon.b{background:var(--blue-light);color:var(--blue);}
+.kpi-icon.p{background:#f3e5f5;color:#ab47bc;}
+.kpi-label{font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:6px;}
+.kpi-value{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--text-primary);line-height:1;}
+.kpi-delta{margin-top:12px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;background:var(--green-mist);color:var(--green-mid);}
+
+.main-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;}
+.grid-2{display:grid;grid-template-columns:repeat(2, 1fr);gap:20px;}
+.grid-3{display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;}
+.panel{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--border);display:flex;flex-direction:column;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;}
+.panel-title{font-size:15px;font-weight:800;color:var(--text-primary);letter-spacing:-0.3px;}
+.panel-sub{font-size:12px;color:var(--text-muted);margin-top:2px;font-weight:500;}
+.panel-body{padding:20px 24px;flex:1;}
+.canvas-wrap{position:relative;height:100%;min-height:220px;}
+
+/* ─── INSIGHT IA HERO ─── */
+.ia-insight-hero{
+  background:linear-gradient(135deg, var(--green-pale), #ffffff);
+  border:1px solid var(--green-light);border-radius:var(--radius-lg);
+  padding:24px;display:flex;gap:24px;align-items:center;box-shadow:var(--shadow-md);
+}
+.ia-hero-icon{font-size:48px;}
+.ia-hero-content h3{font-size:18px;font-weight:800;color:var(--green-dark);margin-bottom:8px;}
+.ia-hero-content p{font-size:14px;color:var(--text-secondary);line-height:1.6;max-width:900px;}
+
+/* ─── TABLES ─── */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);}
+.data-table td{font-size:13px;color:var(--text-primary);font-weight:500;padding:16px;border-bottom:1px solid var(--bg-app);vertical-align:middle;}
+.data-table tr:hover td{background:var(--green-mist);}
+.status-pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;display:inline-flex;align-items:center;gap:4px;}
+.pill-green{background:var(--green-pale);color:var(--green-dark);}
+.pill-amber{background:var(--amber-light);color:#e65100;}
+.pill-red{background:var(--red-light);color:#c62828;}
+.pill-blue{background:var(--blue-light);color:#0d47a1;}
+
+/* ─── ALERT LIST ─── */
+.alert-list{display:flex;flex-direction:column;gap:12px;}
+.alert-item{
+  display:flex;gap:16px;padding:16px;border-radius:16px;
+  background:var(--bg-app);border:1px solid var(--border);
+  transition:all 0.2s;cursor:pointer;
+}
+.alert-item:hover{background:var(--white);box-shadow:var(--shadow-md);border-color:var(--green-light);}
+.alert-icon{font-size:24px;background:var(--white);width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);}
+.alert-content{flex:1;}
+.alert-title{font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:4px;}
+.alert-desc{font-size:12.5px;color:var(--text-secondary);line-height:1.5;}
+.alert-meta{font-size:11px;color:var(--text-muted);margin-top:8px;font-weight:600;}
+
+/* ─── MAP TABS ─── */
+.layer-tabs{display:flex;gap:8px;padding:20px 24px 0;flex-wrap:wrap;}
+.layer-tab{
+  display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:99px;
+  border:1px solid var(--border);background:var(--bg-app);font-size:12px;font-weight:700;
+  cursor:pointer;transition:all 0.2s;color:var(--text-secondary);
+}
+.layer-tab:hover{background:var(--white);border-color:var(--green-light);}
+.layer-tab.active{background:var(--green-dark);border-color:var(--green-dark);color:white;}
+.layer-tab .dot{width:8px;height:8px;border-radius:50%;}
+#brazil-map{height:450px;width:100%;border-radius:0 0 var(--radius-lg) var(--radius-lg);z-index:1;margin-top:16px;}
+
+/* ─── CUSTOM MAP MARKERS & LEGEND ─── */
+.custom-farm-marker {
+  background: white; border: 2px solid var(--green-btn); border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s;
+}
+
+.info.legend {
+  background: white;
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--text-secondary);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.info.legend i {
+  width: 14px;
+  height: 14px;
+  float: left;
+  margin-right: 8px;
+  opacity: 0.9;
+  border-radius: 50%;
+  margin-top: 3px;
+}
+.info.legend h4 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo">
+      <div class="logo-mark"><div class="sq"></div><div class="sq"></div></div>
+      <div class="logo-text">Climate<span>Predict</span></div>
+    </div>
+  </div>
+
+  <div class="user-block">
+    <div class="user-avatar">CP</div>
+    <div class="user-info">
+      <div class="name">Central de Controle</div>
+      <div class="role">Visão Nacional</div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section-label">Painéis Principais</div>
+    <a href="#sec-central" class="nav-item active" onclick="updateNav(this)">
+      <div class="nav-icon">📊</div> Central Inteligente
+    </a>
+    <a href="#sec-usuarios" class="nav-item" onclick="updateNav(this)">
+      <div class="nav-icon">👥</div> Usuários
+    </a>
+    
+    <div class="nav-section-label">Monitoramento & Ação</div>
+    <a href="#sec-geo" class="nav-item" onclick="updateNav(this)">
+      <div class="nav-icon">🗺️</div> Mapa Geoespacial
+    </a>
+    <a href="#sec-alertas" class="nav-item" onclick="updateNav(this)">
+      <div class="nav-icon">🚨</div> Alertas & Previsões <span class="nav-badge">7</span>
+    </a>
+    
+    <div class="nav-section-label">Inteligência & ESG</div>
+    <a href="#sec-esg" class="nav-item" onclick="updateNav(this)">
+      <div class="nav-icon">🌱</div> ESG & Impacto
+    </a>
+  </nav>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+  <header class="topbar">
+    <div class="page-title">
+      <h1 id="topbar-title">Painel Geral</h1>
+      <p id="topbar-sub">Panorama nacional de safra, usuários, risco climático e impacto.</p>
+    </div>
+    <div class="topbar-right">
+      <div style="text-align:right; margin-right:12px;">
+        <div style="font-size:12px; font-weight:700; color:var(--text-primary);">Sincronizado via INPE/NASA</div>
+        <div style="font-size:11px; color:var(--text-muted);">Hoje, 07 de Junho de 2026</div>
+      </div>
+      <button class="btn-primary">⬇ Gerar Relatório</button>
+    </div>
+  </header>
+
+  <div class="content" id="scroll-content">
+
+    <!-- ==========================================
+         SEÇÃO 1: CENTRAL INTELIGENTE & IA
+         ========================================== -->
+    <div id="sec-central" class="section-block">
+      <h2 class="section-title">Central Inteligente & Estatísticas da Plataforma</h2>
+      
+      <div class="ia-insight-hero">
+        <div class="ia-hero-icon">🤖</div>
+        <div class="ia-hero-content">
+          <h3>Bom dia! Aqui está o panorama da Plataforma</h3>
+          <p>Analisamos os dados de satélite e clima de <strong>toda nossa base de usuários</strong> (pequenos agricultores e grandes parceiros). Identificamos um Risco de Seca Moderado a Alto no Nordeste. A IA processou <strong>8.900 interações</strong> esta semana, alertando automaticamente as regiões afetadas. O <strong>Índice da Safra Nacional geral está em 62%</strong> e a estabilidade dos nossos servidores permanece em 99.9%.</p>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Total de Usuários</div><div class="kpi-value">2.850</div></div><div class="kpi-icon b">👥</div></div>
+          <div><span class="kpi-delta">Produtores, Empresas e Setor Público</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Uptime da Plataforma</div><div class="kpi-value" style="color:var(--green-mid);">99.9%</div></div><div class="kpi-icon g">⚙️</div></div>
+          <div><span class="kpi-delta">Servidores Estáveis</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Interações com a IA</div><div class="kpi-value">8.900</div></div><div class="kpi-icon p">🤖</div></div>
+          <div><span class="kpi-delta" style="background:#f3e5f5;color:#ab47bc;">Consultas respondidas nesta semana</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Adoção de Alertas</div><div class="kpi-value">82%</div></div><div class="kpi-icon g">📱</div></div>
+          <div><span class="kpi-delta">Usuários engajados</span></div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Tópicos Mais Perguntados à IA</div><div class="panel-sub">Análise de processamento de linguagem natural (NLP)</div></div>
+          </div>
+          <div class="panel-body"><div class="canvas-wrap"><canvas id="nlpChart"></canvas></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Adoção da Plataforma</div><div class="panel-sub">Crescimento contínuo da base de usuários</div></div>
+          </div>
+          <div class="panel-body">
+            <div class="canvas-wrap" style="height:220px;"><canvas id="farmersChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SEÇÃO 2: USUÁRIOS & DESEMPENHO DA SAFRA
+         ========================================== -->
+    <div id="sec-usuarios" class="section-block">
+      <h2 class="section-title">Usuários & Panorama Agrícola</h2>
+      
+      <div class="cards-grid">
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Índice da Safra</div><div class="kpi-value">62%</div></div><div class="kpi-icon g">🌾</div></div>
+          <div><span class="kpi-delta">Estável vs. Mês Anterior</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Risco Climático Atual</div><div class="kpi-value" style="color:var(--amber);">Moderado</div></div><div class="kpi-icon a">⚠️</div></div>
+          <div><span class="kpi-delta" style="background:var(--amber-light);color:#e65100;">Risco de Seca no NE</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Saúde da Plantação</div><div class="kpi-value" style="color:var(--green-mid);">Boa</div></div><div class="kpi-icon g">🌱</div></div>
+          <div><span class="kpi-delta">78% Índice NDVI Médio</span></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-top"><div><div class="kpi-label">Economia Estimada</div><div class="kpi-value">R$ 4.2M</div></div><div class="kpi-icon b">💰</div></div>
+          <div><span class="kpi-delta">Evitando perdas na safra geral</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Diretório de Usuários (Agricultores Familiares, Empresas e Setor Público)</div></div>
+        <div class="panel-body" style="padding:0; overflow-x:auto;">
+          <table class="data-table">
+            <thead><tr><th>Nome / Entidade</th><th>Categoria</th><th>Localização</th><th>Foco Principal</th><th>Situação Agrícola</th><th>Status Conexão</th></tr></thead>
+            <tbody>
+              <tr><td>João Silva</td><td>Pequeno Produtor</td><td>Itabaiana - SE</td><td>Milho</td><td><span class="status-pill pill-amber">Atenção (Seca)</span></td><td><span style="color:var(--green-btn);font-weight:800;">Online</span></td></tr>
+              <tr><td>AgroTech Sul S/A</td><td>Grande Empresa</td><td>Cascavel - PR</td><td>Soja (Larga Escala)</td><td><span class="status-pill pill-green">Saudável</span></td><td><span style="color:var(--green-btn);font-weight:800;">Online</span></td></tr>
+              <tr><td>Secretaria de Agricultura</td><td>Setor Público</td><td>Petrolina - PE</td><td>Gestão Regional / Fruticultura</td><td><span class="status-pill pill-green">Monitoramento</span></td><td><span style="color:var(--green-btn);font-weight:800;">Online</span></td></tr>
+              <tr><td>Família Santos (Sítio Esperança)</td><td>Pequeno Produtor</td><td>Passo Fundo - RS</td><td>Hortaliças</td><td><span class="status-pill pill-blue">Atenção (Chuva)</span></td><td><span style="color:var(--green-btn);font-weight:800;">Online</span></td></tr>
+              <tr><td>Assoc. Rural de Barreiras</td><td>Cooperativa</td><td>Barreiras - BA</td><td>Algodão</td><td><span class="status-pill pill-red">Crítico (Calor)</span></td><td><span style="color:var(--text-muted);font-weight:800;">Offline há 2h</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SEÇÃO 3: MAPA GEOESPACIAL
+         ========================================== -->
+    <div id="sec-geo" class="section-block">
+      <h2 class="section-title">Mapa Geoespacial Interativo</h2>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Mapeamento Nacional da Base e Clima</div>
+            <div class="panel-sub">Monitoramento via Satélite em tempo real</div>
+          </div>
+        </div>
+        <div class="layer-tabs">
+          <button class="layer-tab active" onclick="setLayer('cluster',this)"><div class="dot" style="background:#4caf50"></div> Cluster de Usuários</button>
+          <button class="layer-tab" onclick="setLayer('umidade',this)"><div class="dot" style="background:#42a5f5"></div> Umidade do Solo</button>
+          <button class="layer-tab" onclick="setLayer('saude',this)"><div class="dot" style="background:#8bc34a"></div> Saúde da Vegetação</button>
+          <button class="layer-tab" onclick="setLayer('temperatura',this)"><div class="dot" style="background:#f44336"></div> Temperatura & Risco de Seca</button>
+        </div>
+        <div id="brazil-map"></div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SEÇÃO 4: ALERTAS & PREVISÕES
+         ========================================== -->
+    <div id="sec-alertas" class="section-block">
+      <h2 class="section-title">Alertas & Previsões Automáticas</h2>
+      
+      <div class="main-grid">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Previsão de Chuva | Próximos 7 Dias</div><div class="panel-sub">Estimativa média nacional baseada em modelos meteorológicos e INPE</div></div>
+          <div class="panel-body"><div class="canvas-wrap"><canvas id="rainChart"></canvas></div></div>
+        </div>
+        
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">Tipos de Alertas Enviados</div></div>
+          <div class="panel-body"><div class="canvas-wrap" style="height:250px;"><canvas id="alertsDonut"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Histórico de Alertas Inteligentes (Envio Automático)</div></div>
+        <div class="panel-body">
+          <div class="alert-list">
+            <div class="alert-item">
+              <div class="alert-icon" style="color:var(--red);">🚨</div>
+              <div class="alert-content">
+                <div class="alert-title">Risco de Seca Moderado a Alto</div>
+                <div class="alert-desc">Previsão de baixa umidade nos próximos 10 dias na região de Itabaiana (SE) e Juazeiro (BA).</div>
+                <div class="alert-meta">Impacta: 142 famílias e 3 empresas · Disparado automaticamente via App/SMS</div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon" style="color:var(--amber);">🌡️</div>
+              <div class="alert-content">
+                <div class="alert-title">Onda de Calor - Alerta Amarelo</div>
+                <div class="alert-desc">Temperaturas acima da média previstas para o Cerrado baiano e goiano nos próximos 5 dias.</div>
+                <div class="alert-meta">Impacta: 84 produtores · Ação IA recomendada: Adiar plantio</div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon" style="color:var(--blue);">💧</div>
+              <div class="alert-content">
+                <div class="alert-title">Baixa Previsão de Chuva</div>
+                <div class="alert-desc">Modelos indicam menos de 5mm de chuva acumulada na próxima semana para o norte de Minas Gerais.</div>
+                <div class="alert-meta">Impacta: 56 propriedades · Ação IA recomendada: Otimizar irrigação</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================================
+         SEÇÃO 5: ESG & IMPACTO
+         ========================================== -->
+    <div id="sec-esg" class="section-block">
+      <h2 class="section-title">ESG & Impacto Social</h2>
+      <div class="grid-2">
+        <div class="panel" style="background:var(--green-mist); border:1px solid var(--green-light);">
+          <div class="panel-body" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:40px;">
+            <div style="font-size:48px; margin-bottom:16px;">🌍</div>
+            <h3 style="font-size:20px; font-weight:800; color:var(--green-dark); margin-bottom:12px;">ODS 13: Ação Contra a Mudança Climática</h3>
+            <p style="font-size:14px; color:var(--text-secondary); line-height:1.6;">Ao prever secas e chuvas extremas com IA, permitimos que as famílias rurais e grandes parceiros se adaptem proativamente às mudanças do clima, reduzindo drasticamente as perdas na colheita.</p>
+          </div>
+        </div>
+        <div class="panel" style="background:var(--amber-light); border:1px solid #ffcc80;">
+          <div class="panel-body" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:40px;">
+            <div style="font-size:48px; margin-bottom:16px;">🌾</div>
+            <h3 style="font-size:20px; font-weight:800; color:#e65100; margin-bottom:12px;">ODS 2: Fome Zero e Agricultura Sustentável</h3>
+            <p style="font-size:14px; color:var(--text-secondary); line-height:1.6;">Democratizamos o acesso a tecnologias avançadas da NASA e INPE para todas as camadas de produtores (onde pequenos produzem 70% da comida no Brasil), promovendo a segurança alimentar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<script>
+// ─── NAV LOGIC (Single Page Scroll) ───
+function updateNav(el) {
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Intercept scroll to update nav status
+const observerOptions = { root: document.getElementById('scroll-content'), threshold: 0.2 };
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      document.querySelectorAll('.nav-item').forEach(i => {
+        i.classList.remove('active');
+        if (i.getAttribute('href') === '#' + id) {
+          i.classList.add('active');
+        }
+      });
+    }
+  });
+}, observerOptions);
+
+document.querySelectorAll('.section-block').forEach(section => {
+  observer.observe(section);
+});
+
+
+// ─── CHARTS SETUP ───
+Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+Chart.defaults.color = '#8b9d8b';
+const colors = { green: '#4caf50', blue: '#42a5f5', purple: '#ab47bc', amber: '#ff9800', red: '#f44336', bgGreen: '#e8f5e9' };
+
+// Gráfico Tópicos NLP
+new Chart(document.getElementById('nlpChart').getContext('2d'), {
+  type: 'bar',
+  data: { 
+    labels: ['Qual a previsão de chuva?', 'Risco de Seca', 'Como plantar na seca?', 'Explicar Mapa'], 
+    datasets: [{ data: [3200, 2500, 1800, 1400], backgroundColor: '#81c784', borderRadius: 8 }] 
+  },
+  options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }
+});
+
+// Gráfico de Adoção Produtores
+new Chart(document.getElementById('farmersChart').getContext('2d'), {
+  type: 'line',
+  data: { 
+    labels: ['Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'], 
+    datasets: [{ label: 'Usuários Ativos', data: [900, 1250, 1600, 2100, 2450, 2850], borderColor: colors.green, backgroundColor: colors.bgGreen, fill: true, tension: 0.4 }] 
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#eaeee9' } }, x: { grid: { display: false } } } }
+});
+
+// Gráfico Previsão de Chuva
+new Chart(document.getElementById('rainChart').getContext('2d'), {
+  type: 'bar',
+  data: { 
+    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'], 
+    datasets: [{ data: [1.2, 0.5, 0.8, 0.2, 1.5, 2.8, 4.5], backgroundColor: colors.blue, borderRadius: 6 }] 
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } } }
+});
+
+// Gráfico Alertas Donut
+new Chart(document.getElementById('alertsDonut').getContext('2d'), {
+  type: 'doughnut',
+  data: { 
+    labels: ['Seca', 'Chuva Intensa', 'Geada', 'Calor'], 
+    datasets: [{ data: [45, 25, 10, 20], backgroundColor: [colors.red, colors.blue, '#9c27b0', colors.amber], borderWidth: 0 }] 
+  },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+});
+
+// ─── LEAFLET MAP (Lógica de Camadas & Legendas) ───
+const map = L.map('brazil-map', { center: [-14.235, -51.925], zoom: 4, zoomControl: false });
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
+  attribution: '© OpenStreetMap contributors © CARTO', opacity: 0.9 
+}).addTo(map);
+
+// Controle de Legenda Personalizado
+let legend = L.control({position: 'bottomleft'});
+legend.onAdd = function (map) {
+  this._div = L.DomUtil.create('div', 'info legend');
+  this.update('cluster'); 
+  return this._div;
+};
+legend.update = function (layerType) {
+  let html = '';
+  if (layerType === 'cluster') {
+    html += '<h4>Volume de Usuários</h4>';
+    html += '<div style="margin-top:4px;">Tamanho do círculo =<br>Quantidade no polo</div>';
+  } else if (layerType === 'umidade') {
+    html += '<h4>Umidade do Solo</h4>';
+    html += '<i style="background:#bbdefb"></i> Crítica (< 35%)<br>';
+    html += '<i style="background:#42a5f5"></i> Atenção (35% - 59%)<br>';
+    html += '<i style="background:#1565c0"></i> Ideal (≥ 60%)<br>';
+  } else if (layerType === 'saude') {
+    html += '<h4>Saúde (NDVI)</h4>';
+    html += '<i style="background:#cddc39"></i> Baixa (< 50%)<br>';
+    html += '<i style="background:#8bc34a"></i> Moderada (50% - 74%)<br>';
+    html += '<i style="background:#2e7d2e"></i> Alta (≥ 75%)<br>';
+  } else if (layerType === 'temperatura') {
+    html += '<h4>Temperatura</h4>';
+    html += '<i style="background:#ffcc80"></i> Normal (≤ 30°C)<br>';
+    html += '<i style="background:#ff9800"></i> Quente (31°C - 34°C)<br>';
+    html += '<i style="background:#d32f2f"></i> Risco Seca (> 34°C)<br>';
+  }
+  this._div.innerHTML = html;
+};
+legend.addTo(map);
+
+
+const farmLocations = [
+  { lat: -10.68, lng: -37.42, name: 'Itabaiana, SE', state: 'Sergipe', users: 142, umidade: 25, saude: 55, temp: 36 },
+  { lat: -9.39,  lng: -40.50, name: 'Petrolina, PE', state: 'Pernambuco', users: 210, umidade: 30, saude: 60, temp: 34 },
+  { lat: -5.10,  lng: -39.30, name: 'Sertão Central, CE', state: 'Ceará', users: 315, umidade: 20, saude: 45, temp: 37 },
+  { lat: -12.15, lng: -44.99, name: 'Barreiras, BA', state: 'Bahia', users: 180, umidade: 35, saude: 65, temp: 33 },
+  { lat: -18.72, lng: -44.40, name: 'Curvelo, MG', state: 'Minas Gerais', users: 95, umidade: 55, saude: 80, temp: 29 },
+  { lat: -21.17, lng: -47.81, name: 'Ribeirão Preto, SP', state: 'São Paulo', users: 120, umidade: 60, saude: 85, temp: 28 },
+  { lat: -24.95, lng: -53.45, name: 'Cascavel, PR', state: 'Paraná', users: 250, umidade: 75, saude: 90, temp: 22 },
+  { lat: -28.26, lng: -52.40, name: 'Passo Fundo, RS', state: 'Rio Grande do Sul', users: 280, umidade: 80, saude: 88, temp: 19 },
+  { lat: -12.54, lng: -55.72, name: 'Sorriso, MT', state: 'Mato Grosso', users: 150, umidade: 50, saude: 78, temp: 31 },
+  { lat: -16.53, lng: -49.31, name: 'Goiânia (Entorno), GO', state: 'Goiás', users: 110, umidade: 45, saude: 70, temp: 32 }
+];
+
+let mapLayerGroup = L.layerGroup().addTo(map);
+
+function renderMap(layerType) {
+  mapLayerGroup.clearLayers();
+  
+  farmLocations.forEach(loc => {
+    let radius = 20;
+    let bgColor = 'white';
+    let borderColor = 'var(--green-btn)';
+    let innerColor = 'var(--green-btn)';
+    let infoLabel = '';
+
+    if (layerType === 'cluster') {
+      radius = Math.max(20, loc.users / 5);
+      borderColor = 'rgba(76, 175, 80, 0.5)';
+      innerColor = 'var(--green-btn)';
+      infoLabel = `Usuários: ${loc.users}`;
+    } 
+    else if (layerType === 'umidade') {
+      radius = 30;
+      borderColor = 'transparent';
+      innerColor = loc.umidade < 35 ? '#bbdefb' : (loc.umidade < 60 ? '#42a5f5' : '#1565c0');
+      infoLabel = `Umidade do Solo: ${loc.umidade}%`;
+    }
+    else if (layerType === 'saude') {
+      radius = 30;
+      borderColor = 'transparent';
+      innerColor = loc.saude < 50 ? '#cddc39' : (loc.saude < 75 ? '#8bc34a' : '#2e7d2e');
+      infoLabel = `Índice de Saúde (NDVI): ${loc.saude}%`;
+    }
+    else if (layerType === 'temperatura') {
+      radius = 30;
+      borderColor = 'transparent';
+      innerColor = loc.temp > 34 ? '#d32f2f' : (loc.temp > 30 ? '#ff9800' : '#ffcc80');
+      infoLabel = `Temperatura Média: ${loc.temp}°C`;
+    }
+
+    const markerHtml = `
+      <div class="custom-farm-marker" style="
+        width:${radius}px; height:${radius}px; 
+        background-color:${bgColor}; border-color:${borderColor};
+        border-width: ${layerType === 'cluster' ? '2px' : '0px'};
+        opacity: ${layerType === 'cluster' ? '1' : '0.85'};
+      ">
+        <div style="width:100%; height:100%; border-radius:50%; background-color:${innerColor}; ${layerType === 'cluster' ? 'transform: scale(0.4);' : ''}"></div>
+      </div>
+    `;
+    
+    const icon = L.divIcon({ className: '', html: markerHtml, iconSize: [radius, radius], iconAnchor: [radius/2, radius/2] });
+    const marker = L.marker([loc.lat, loc.lng], { icon: icon });
+    
+    marker.bindPopup(`<div style="font-family:'Plus Jakarta Sans';"><b>${loc.name}</b><br>${infoLabel}</div>`);
+    mapLayerGroup.addLayer(marker);
+  });
+}
+
+function setLayer(layer, btn) {
+  document.querySelectorAll('.layer-tabs .layer-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMap(layer);
+  legend.update(layer);
+}
+
+// Inicia o mapa (Precisa de um pequeno timeout na renderização da aba única)
+setTimeout(() => { 
+  map.invalidateSize();
+  renderMap('cluster'); 
+}, 500);
+
+</script>
+</body>
+</html>
