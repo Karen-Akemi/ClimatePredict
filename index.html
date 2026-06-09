@@ -127,7 +127,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-app);color:v
 .panel-body{padding:20px 24px;flex:1;}
 .canvas-wrap{position:relative;height:100%;min-height:220px;}
 
-/* ─── INSIGHT IA HERO ─── */
+/* ─── INSIGHT IA HERO & PANEL ─── */
 .ia-insight-hero{
   background:linear-gradient(135deg, var(--green-pale), #ffffff);
   border:1px solid var(--green-light);border-radius:var(--radius-lg);
@@ -136,6 +136,17 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-app);color:v
 .ia-hero-icon{font-size:48px;}
 .ia-hero-content h3{font-size:18px;font-weight:800;color:var(--green-dark);margin-bottom:8px;}
 .ia-hero-content p{font-size:14px;color:var(--text-secondary);line-height:1.6;max-width:900px;}
+
+.ai-analysis-panel {
+  display: none;
+  margin: 16px 24px 0;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f3e5f5, #ffffff);
+  border: 1px solid #ce93d8;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  animation: fadeDown 0.3s ease forwards;
+}
 
 /* ─── TABLES ─── */
 .data-table{width:100%;border-collapse:collapse;}
@@ -207,6 +218,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-app);color:v
   font-size: 13px;
   font-weight: 800;
 }
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
 </style>
 </head>
 <body>
@@ -375,7 +388,21 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-app);color:v
             <div class="panel-title">Mapeamento Nacional da Base e Clima</div>
             <div class="panel-sub">Monitoramento via Satélite em tempo real</div>
           </div>
+          <button class="btn-primary" style="background:#f3e5f5; color:#ab47bc; border:1px solid #ce93d8;" onclick="toggleAiAnalysis()">
+             ✨ Analisar com IA
+          </button>
         </div>
+
+        <div id="ai-analysis-panel" class="ai-analysis-panel">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="font-size:24px;">🤖</div>
+            <div>
+              <h4 style="font-size:14px; font-weight:800; color:#6a1b9a; margin-bottom:4px;">Análise Inteligente da Camada Ativa</h4>
+              <p id="ai-analysis-text" style="font-size:13px; color:var(--text-secondary); line-height:1.5;"></p>
+            </div>
+          </div>
+        </div>
+
         <div class="layer-tabs">
           <button class="layer-tab active" onclick="setLayer('cluster',this)"><div class="dot" style="background:#4caf50"></div> Cluster de Usuários</button>
           <button class="layer-tab" onclick="setLayer('umidade',this)"><div class="dot" style="background:#42a5f5"></div> Umidade do Solo</button>
@@ -536,13 +563,33 @@ new Chart(document.getElementById('alertsDonut').getContext('2d'), {
   options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
 });
 
-// ─── LEAFLET MAP (Lógica de Camadas & Legendas) ───
+// ─── LEAFLET MAP & AI EXPLANATION ───
 const map = L.map('brazil-map', { center: [-14.235, -51.925], zoom: 4, zoomControl: false });
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { 
   attribution: '© OpenStreetMap contributors © CARTO', opacity: 0.9 
 }).addTo(map);
+
+// IA Explanation Data
+const aiExplanations = {
+  'cluster': "A visão de <strong>Cluster de Usuários</strong> mapeia a densidade de nossa base ativa no país. Observamos uma forte adoção no eixo Sul e uma crescente aderência de produtores e cooperativas na região Nordeste. Estes dados guiam nossas campanhas de expansão e infraestrutura local.",
+  'umidade': "O modelo atual de <strong>Umidade do Solo</strong> identifica níveis críticos e preocupantes (abaixo de 35%) concentrados principalmente no semiárido nordestino. A IA já disparou alertas sugerindo técnicas de otimização de irrigação para os usuários destas zonas afetadas.",
+  'saude': "O <strong>Índice de Saúde da Vegetação (NDVI)</strong> mostra resultados altamente positivos nas lavouras da região Sul e Sudeste (níveis acima de 75%). Entretanto, áreas do Centro-Oeste e Nordeste apresentam sinais mistos, refletindo impactos iniciais do estresse térmico na fotossíntese.",
+  'temperatura': "A análise de <strong>Temperatura & Risco de Seca</strong> detecta ondas de calor severas na Bahia, Ceará e partes do Centro-Oeste, com médias locais superando 34°C. O sistema de predição aconselha adiar plantios iminentes nestas zonas vermelhas."
+};
+
+let currentMapLayer = 'cluster';
+
+function toggleAiAnalysis() {
+  const panel = document.getElementById('ai-analysis-panel');
+  if (panel.style.display === 'none' || panel.style.display === '') {
+    panel.style.display = 'block';
+    document.getElementById('ai-analysis-text').innerHTML = aiExplanations[currentMapLayer];
+  } else {
+    panel.style.display = 'none';
+  }
+}
 
 // Controle de Legenda Personalizado
 let legend = L.control({position: 'bottomleft'});
@@ -649,8 +696,16 @@ function renderMap(layerType) {
 function setLayer(layer, btn) {
   document.querySelectorAll('.layer-tabs .layer-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  
+  currentMapLayer = layer;
   renderMap(layer);
   legend.update(layer);
+  
+  // Atualiza o texto da IA se o painel estiver aberto
+  const panel = document.getElementById('ai-analysis-panel');
+  if (panel.style.display === 'block') {
+    document.getElementById('ai-analysis-text').innerHTML = aiExplanations[layer];
+  }
 }
 
 // Inicia o mapa (Precisa de um pequeno timeout na renderização da aba única)
